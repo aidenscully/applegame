@@ -33,6 +33,7 @@ class GameScene extends Phaser.Scene{
     this.coinMusic
     this.emitter
     this.playerDead
+    this.map
   }
 
   preload(){
@@ -41,6 +42,8 @@ class GameScene extends Phaser.Scene{
     this.load.image("enemy", "/assets/enemy.png")
     this.load.audio("coin", "/assets/coin.mp3")
     this.load.image("money", "/assets/money.png")
+    this.load.tiledmapTiledJSON("map", "/assets/blankmap.tmj")
+    this.load.image("tiles", "/assets/blanktileset.png")
   }
 
   create(){
@@ -53,17 +56,24 @@ class GameScene extends Phaser.Scene{
 
     this.cameras.main.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT)
 
-    this.add.image(0,0,"bg").setOrigin(0,0)
+    const map = this.make.tilemap({ key: "map" })
+    this.map = map
+
+    const tileset = map.addTilesetImage("blanktileset", "tiles")
+    map.createLayer(0, tileset, 0, 0)
+
+    this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels)
+    this.cameras.main.setBounds(0, 0, map.widthInPixels, map.heightInPixels)
+
     this.player = this.physics.add
       .image(0,sizes.height-100, "player")
       .setOrigin(0,0)
     this.player.setImmovable(true)
     this.player.body.allowGravity = false
     this.player.setCollideWorldBounds(true)
-    this.player.setSize(this.player.width,this.player.height)
 
-    this.cameras.main.startFollow(this.player, true)
-    this.cameras.main.setViewport(50, 50, sizes.width-100, sizes.height-100)
+    this.cameras.main.startFollow(this.player, true, 0.08, 0.08)
+    this.cameras.main.setZoom(1.5)
 
 
     this.targets = this.physics.add.group({
