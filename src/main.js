@@ -9,11 +9,13 @@ const sizes={
 const speedDown=300
 const NUM_ENEMIES=5
 
+const FRAME_HEIGHT=540
+const FRAME_WIDTH=960
+
 const gameStartDiv = document.querySelector("#gameStartDiv")
 const gameStartBtn = document.querySelector("#gameStartBtn")
 const gameEndDiv = document.querySelector("#gameEndDiv")
 const gameWinLoseSpan = document.querySelector("#gameWinLoseSpan")
-const gameEndScoreSpan = document.querySelector("#gameEndScoreSpan")
 
 class GameScene extends Phaser.Scene{
   constructor(){
@@ -23,12 +25,14 @@ class GameScene extends Phaser.Scene{
     this.playerSpeed=speedDown+50
     this.targets
     this.points = 0
+    this.playersRemaining = NUM_ENEMIES + 1
     this.textScore
     this.textTime
     this.timedEvent
     this.remainingTime
     this.coinMusic
     this.emitter
+    this.playerDead
   }
 
   preload(){
@@ -45,6 +49,10 @@ class GameScene extends Phaser.Scene{
   
     this.coinMusic = this.sound.add("coin")
 
+    this.physics.world.setBounds(0, 0, sizes.width, sizes.height)
+
+    this.cameras.main.setBounds(0, 0, FRAME_WIDTH, FRAME_HEIGHT)
+
     this.add.image(0,0,"bg").setOrigin(0,0)
     this.player = this.physics.add
       .image(0,sizes.height-100, "player")
@@ -53,6 +61,10 @@ class GameScene extends Phaser.Scene{
     this.player.body.allowGravity = false
     this.player.setCollideWorldBounds(true)
     this.player.setSize(this.player.width,this.player.height)
+
+    this.cameras.main.startFollow(this.player, true)
+    this.cameras.main.setViewport(50, 50, sizes.width-100, sizes.height-100)
+
 
     this.targets = this.physics.add.group({
       allowGravity: false,
@@ -118,6 +130,10 @@ class GameScene extends Phaser.Scene{
     } else{
       this.player.setVelocityY(0);
     }
+
+    if (this.playersRemaining == 1 || this.playerDead) {
+      this.gameOver()
+    }
   }
 
   getRandomX() {
@@ -129,16 +145,15 @@ class GameScene extends Phaser.Scene{
 
   targetHit(player, target) {
     this.coinMusic.play()
-    this.emitter.start()
-    target.setY(this.getRandomY())
-    target.setX(this.getRandomX())
-    this.points++
+    //this.emitter.start()
+    target.destroy()
     this.textScore.setText(`Score: ${this.points}`)
+    this.playersRemaining--
   }
 
   gameOver(){
     this.sys.game.destroy(true)
-    if(this.points >= 10){
+    if(this.playersRemaining == 1){
       gameEndScoreSpan.textContent = this.points
       gameWinLoseSpan.textContent = "Win!"
     } else {
