@@ -2,11 +2,12 @@ import './style.css'
 import Phaser from 'phaser'
 
 const sizes={
-  width:500,
-  height:500
+  width:1024,
+  height:1024
 }
 
 const speedDown=300
+const NUM_ENEMIES=5
 
 const gameStartDiv = document.querySelector("#gameStartDiv")
 const gameStartBtn = document.querySelector("#gameStartBtn")
@@ -20,7 +21,7 @@ class GameScene extends Phaser.Scene{
     this.player
     this.cursor
     this.playerSpeed=speedDown+50
-    this.target
+    this.targets
     this.points = 0
     this.textScore
     this.textTime
@@ -31,9 +32,9 @@ class GameScene extends Phaser.Scene{
   }
 
   preload(){
-    this.load.image("bg", "/assets/bg.png")
-    this.load.image("basket", "/assets/basket.png")
-    this.load.image("apple", "/assets/apple.png")
+    this.load.image("bg", "/assets/map.png")
+    this.load.image("player", "/assets/player.png")
+    this.load.image("enemy", "/assets/enemy.png")
     this.load.audio("coin", "/assets/coin.mp3")
     this.load.image("money", "/assets/money.png")
   }
@@ -46,23 +47,33 @@ class GameScene extends Phaser.Scene{
 
     this.add.image(0,0,"bg").setOrigin(0,0)
     this.player = this.physics.add
-      .image(0,sizes.height-100, "basket")
+      .image(0,sizes.height-100, "player")
       .setOrigin(0,0)
     this.player.setImmovable(true)
     this.player.body.allowGravity = false
     this.player.setCollideWorldBounds(true)
-    this.player.setSize(this.player.width-this.player.width/4,this.player.height/6)
-      .setOffset(this.player.width/10, this.player.height-this.player.height/10)
+    this.player.setSize(this.player.width,this.player.height)
 
-    this.target = this.physics.add
-      .image(0,0, "apple")
-      .setOrigin(0,0)
+    this.targets = this.physics.add.group({
+      allowGravity: false,
+      maxVelocityY: speedDown
+    })
+    for (let i = 0; i < NUM_ENEMIES; i++) {
+      const target = this.physics.add.image(this.getRandomX(), this.getRandomY(), "enemy").setOrigin(0, 0);
+      target.setImmovable(true);
+      //target.body.allowGravity = false;
+      //target.setMaxVelocity(0, speedDown);
+      this.targets.add(target);
+    }
 
-    this.target.setMaxVelocity(0, speedDown)
-
-    this.physics.add.overlap(this.player, this.target, this.targetHit, null, this)
+    this.physics.add.overlap(this.player, this.targets, this.targetHit, null, this)
     
-    this.cursor=this.input.keyboard.createCursorKeys()
+    this.cursor=this.input.keyboard.addKeys({
+      up: Phaser.Input.Keyboard.KeyCodes.W,
+      down: Phaser.Input.Keyboard.KeyCodes.S,
+      left: Phaser.Input.Keyboard.KeyCodes.A,
+      right: Phaser.Input.Keyboard.KeyCodes.D
+    })
 
     this.textScore = this.add.text(sizes.width - 120, 10, "Score: 0", {
       font: "25px Arial",
@@ -73,7 +84,7 @@ class GameScene extends Phaser.Scene{
       fill: "#0000000",
     });
 
-    this.timedEvent = this.time.delayedCall(10000, this.gameOver, [], this)
+    //this.timedEvent = this.time.delayedCall(10000, this.gameOver, [], this)
 
     this.emitter=this.add.particles(0,0,"money", {
       speed:100,
@@ -86,14 +97,10 @@ class GameScene extends Phaser.Scene{
   }
 
   update(){
-    this.remainingTime = this.timedEvent.getRemainingSeconds()
-    this.textTime.setText(`Remaining Time: ${Math.round(this.remainingTime).toString()}`)
+    //this.remainingTime = this.timedEvent.getRemainingSeconds()
+    //this.textTime.setText(`Remaining Time: ${Math.round(this.remainingTime).toString()}`)
 
-    if (this.target.y >= sizes.height) {
-      this.target.setY(0);
-      this.target.setX(this.getRandomX())
-    }
-
+    
     const {left, right, down, up} = this.cursor
 
     if (left.isDown){
@@ -114,14 +121,17 @@ class GameScene extends Phaser.Scene{
   }
 
   getRandomX() {
-    return Math.floor(Math.random() * 480);
+    return Math.floor(Math.random() * sizes.width);
+  }
+  getRandomY() {
+    return Math.floor(Math.random() * sizes.height);
   }
 
-  targetHit() {
+  targetHit(player, target) {
     this.coinMusic.play()
     this.emitter.start()
-    this.target.setY(0)
-    this.target.setX(this.getRandomX())
+    target.setY(this.getRandomY())
+    target.setX(this.getRandomX())
     this.points++
     this.textScore.setText(`Score: ${this.points}`)
   }
@@ -145,6 +155,10 @@ const config = {
   width:sizes.width,
   height:sizes.height,
   canvas:gameCanvas,
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_VERTICALLY
+  },
   physics:{
     default:"arcade",
     arcade:{
@@ -160,4 +174,8 @@ const game = new Phaser.Game(config)
 gameStartBtn.addEventListener("click", ()=>{
   gameStartDiv.style.display="none"
   game.scene.resume("scene-game")
+
+  const audio = new Audio("/assets/start2.wav")
+  audio.volume = 0.3
+  audio.play()
 })
